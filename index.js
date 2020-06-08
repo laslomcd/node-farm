@@ -2,6 +2,8 @@ const fs = require("fs");
 const http = require("http");
 const url = require("url");
 
+const replaceTemplate = require("./modules/replaceTemplate");
+
 ////////////////////////////////////////////////**
 // FILES
 
@@ -29,20 +31,7 @@ const url = require("url");
 
 /////////////////////////**
 // SERVER
-const replaceTemplate = (temp, product) => {
-  let output = temp.replace(/{%PRODUCTNAME%}/g, product.productName);
-  output = output.replace(/{%IMAGE%}/g, product.image);
-  output = output.replace(/{%PRICE%}/g, product.price);
-  output = output.replace(/{%NUTRIENTS%}/g, product.nutrients);
-  output = output.replace(/{%QUANTITY%}/g, product.quantity);
-  output = output.replace(/{%DESCRIPTION%}/g, product.description);
-  output = output.replace(/{%ID%}/g, product.id);
 
-  if (product.organic)
-    output = output.replace(/{%NOTORGANIC%}/g, "not-organic");
-
-  return output;
-};
 const data = fs.readFileSync(`${__dirname}/dev-data/data.json`, "utf-8");
 const tempOverview = fs.readFileSync(
   `${__dirname}/templates/template-overview.html`,
@@ -59,7 +48,7 @@ const tempProduct = fs.readFileSync(
 const productData = JSON.parse(data);
 
 const server = http.createServer((req, res) => {
-  const pathname = req.url;
+  const { query, pathname } = url.parse(req.url, true);
 
   // Overview Page
   if (pathname === "/" || pathname === "/overview") {
@@ -74,7 +63,12 @@ const server = http.createServer((req, res) => {
 
     // Product Page
   } else if (pathname === "/product") {
-    res.end("This is the Product Page");
+    const product = productData[query.id];
+    res.writeHead(200, {
+      "Content-Type": "text/html",
+    });
+    const productHTML = replaceTemplate(tempProduct, product);
+    res.end(productHTML);
 
     // API Page
   } else if (pathname === "/api") {
